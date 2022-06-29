@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <emmintrin.h>
+#include <immintrin.h>
 
 #include "clht_lb_res.h"
 
@@ -126,7 +127,8 @@ static inline unsigned long read_tsc(void)
 }
 
 static inline void mfence() {
-    asm volatile("sfence":::"memory");
+    _mm_sfence();
+    // asm volatile("sfence":::"memory");
 }
 
 static inline void clflush(char *data, int len, bool front, bool back)
@@ -136,13 +138,15 @@ static inline void clflush(char *data, int len, bool front, bool back)
         mfence();
     for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){
         unsigned long etsc = read_tsc() + (unsigned long)(write_latency*CPU_FREQ_MHZ/1000);
-#ifdef CLFLUSH
-        asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
-#elif CLFLUSH_OPT
-        asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
-#elif CLWB
-        asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
-#endif
+
+        _mm_clflush(ptr);
+// #ifdef CLFLUSH
+//         asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
+// #elif CLFLUSH_OPT
+//         asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
+// #elif CLWB
+//         asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
+// #endif
 	    while(read_tsc() < etsc) cpu_pause();
     }
     if (back)
@@ -156,13 +160,15 @@ static inline void clflush_next_check(char *data, int len, bool fence)
         mfence();
     for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){
         unsigned long etsc = read_tsc() + (unsigned long)(write_latency*CPU_FREQ_MHZ/1000);
-#ifdef CLFLUSH
-        asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
-#elif CLFLUSH_OPT
-        asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
-#elif CLWB
-        asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
-#endif
+// #ifdef CLFLUSH
+//         asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
+// #elif CLFLUSH_OPT
+//         asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
+// #elif CLWB
+//         asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
+// #endif
+        _mm_clflush(ptr);
+
 		if (((bucket_t *)ptr)->next)
             clflush_next_check((char *)(((bucket_t *)ptr)->next), sizeof(bucket_t), false);
         while(read_tsc() < etsc) cpu_pause();
