@@ -181,6 +181,7 @@ static inline void movnt64(uint64_t *dest, uint64_t const src, bool front, bool 
     assert(((uint64_t)dest & 7) == 0);
     if (front) mfence();
     _mm_stream_si64((long long int *)dest, (long long int) src);
+    _mm_clflush(dest);
     if (back) mfence();
 }
 
@@ -760,8 +761,9 @@ ht_resize_pes(clht_t* h, int is_increase, int by)
 
 	// atomically swap the root pointer
     //SWAP_U64((uint64_t*) h, (uint64_t) ht_new);
-    //clflush((char *)h, sizeof(uint64_t), false, true);
-    movnt64((uint64_t)&h->ht, (uint64_t)ht_new, false, true);
+    *(uint64_t*)h = (uint64_t)ht_new;
+    clflush((char *)h, sizeof(uint64_t), false, true);
+    // movnt64((uint64_t)&h->ht, (uint64_t)ht_new, false, true);
 
 #if defined(CRASH_AFTER_SWAP_CLHT)
 	pid_t pid1 = fork();
