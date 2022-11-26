@@ -62,7 +62,7 @@ extern __thread ssmem_allocator_t* clht_alloc;
 #define CLHT_RATIO_HALVE      8
 #define CLHT_MIN_CLHT_SIZE    8
 #define CLHT_DO_CHECK_STATUS  0
-#define CLHT_DO_GC            0
+#define CLHT_DO_GC            1
 #define CLHT_STATUS_INVOK     500000
 #define CLHT_STATUS_INVOK_IN  500000
 #define LOAD_FACTOR           2
