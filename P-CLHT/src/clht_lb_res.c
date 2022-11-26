@@ -65,7 +65,7 @@ __thread size_t check_ht_status_steps = CLHT_STATUS_INVOK_IN;
 #else
  #define DEBUG_PRINT(fmt, args...)
 #endif
-
+volatile uint32_t g_dwEntriesPerBucket = ENTRIES_PER_BUCKET;
 /*
 #ifdef CLHTDEBUG
 	#define DEBUG_PRINT(x) printf x
@@ -199,7 +199,7 @@ clht_bucket_create()
     bucket->lock = 0;
 
     uint32_t j;
-    for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+    for (j = 0; j < g_dwEntriesPerBucket; j++)
     {
         bucket->key[j] = 0;
     }
@@ -287,7 +287,7 @@ clht_hashtable_create(uint64_t num_buckets)
     {
         hashtable->table[i].lock = LOCK_FREE;
         uint32_t j;
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             hashtable->table[i].key[j] = 0;
         }
@@ -335,7 +335,7 @@ clht_val_t clht_get(clht_hashtable_t* hashtable, clht_addr_t key)
     uint32_t j;
     do
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             clht_val_t val = bucket->val[j];
 #ifdef __tile__
@@ -366,7 +366,7 @@ bucket_exists(volatile bucket_t* bucket, clht_addr_t key)
     uint32_t j;
     do 
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             if (bucket->key[j] == key)
             {
@@ -410,7 +410,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
     uint32_t j;
     do 
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             if (bucket->key[j] == key) 
             {
@@ -506,7 +506,7 @@ clht_val_t clht_remove(clht_t* h, clht_addr_t key)
     uint64_t emptyMarker = 0;
     do
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             if (bucket->key[j] == key)
             {
@@ -531,7 +531,7 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
 
     do
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             if (bucket->key[j] == 0)
             {
@@ -567,7 +567,7 @@ bucket_cpy(clht_t* h, volatile bucket_t* bucket, clht_hashtable_t* ht_new)
     uint32_t j;
     do
     {
-        for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+        for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
             clht_addr_t key = bucket->key[j];
             if (key != 0)
@@ -842,7 +842,7 @@ clht_size(clht_hashtable_t* hashtable)
         uint32_t j;
         do
         {
-            for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+            for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
                 if (bucket->key[j] > 0)
                 {
@@ -886,7 +886,7 @@ ht_status(clht_t* h, int resize_increase, int just_print)
         {
             expands_cont++;
             expands++;
-            for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+            for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
                 if (bucket->key[j] > 0)
                 {
@@ -904,7 +904,7 @@ ht_status(clht_t* h, int resize_increase, int just_print)
         }
     }
 
-    double full_ratio = 100.0 * size / ((hashtable->num_buckets) * ENTRIES_PER_BUCKET);
+    double full_ratio = 100.0 * size / ((hashtable->num_buckets) * g_dwEntriesPerBucket);
 
     if (just_print)
     {
@@ -1000,7 +1000,7 @@ clht_print(clht_hashtable_t* hashtable)
         uint32_t j;
         do
         {
-            for (j = 0; j < ENTRIES_PER_BUCKET; j++)
+            for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
                 if (bucket->key[j])
                 {
