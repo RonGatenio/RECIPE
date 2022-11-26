@@ -126,10 +126,10 @@ static inline unsigned long read_tsc(void)
     return var;
 }
 
-static inline void mfence() {
-    _mm_sfence();
-    // asm volatile("sfence":::"memory");
-}
+#define mfence() _mm_sfence()
+
+
+
 
 static inline void clflush(char *data, int len, bool front, bool back)
 {
@@ -177,13 +177,13 @@ static inline void clflush_next_check(char *data, int len, bool fence)
         mfence();
 }
 
-static inline void movnt64(uint64_t *dest, uint64_t const src, bool front, bool back) {
-    assert(((uint64_t)dest & 7) == 0);
-    if (front) mfence();
-    _mm_stream_si64((long long int *)dest, (long long int) src);
-    _mm_clflush(dest);
-    if (back) mfence();
-}
+
+
+
+
+#define W(x, v) __atomic_store_n((uint64_t*)&x, (uint64_t)v, __ATOMIC_SEQ_CST)
+#define R(x) __atomic_load_n((uint64_t*)&x, __ATOMIC_SEQ_CST)
+#define movnt64(dest, src, front, back) if (front) mfence(); __atomic_store_n((uint64_t*) dest, (uint64_t) src, __ATOMIC_SEQ_CST); _mm_clflush(dest); if (back) mfence();
 
 /* Create a new bucket. */
     bucket_t*
@@ -201,7 +201,7 @@ clht_bucket_create()
     uint32_t j;
     for (j = 0; j < g_dwEntriesPerBucket; j++)
     {
-        bucket->key[j] = 0;
+        W(bucket->key[j], 0);
     }
     bucket->next = NULL;
 
@@ -325,6 +325,7 @@ clht_hash(clht_hashtable_t* hashtable, clht_addr_t key)
 }
 
 
+
 /* Retrieve a key-value entry from a hash table. */
 clht_val_t clht_get(clht_hashtable_t* hashtable, clht_addr_t key)
 {
@@ -341,7 +342,7 @@ clht_val_t clht_get(clht_hashtable_t* hashtable, clht_addr_t key)
 #ifdef __tile__
             _mm_lfence();
 #endif
-            if (bucket->key[j] == key)
+            if (R(bucket->key[j]) == key)
             {
                 if (likely(bucket->val[j] == val))
                 {
@@ -368,7 +369,7 @@ bucket_exists(volatile bucket_t* bucket, clht_addr_t key)
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            if (bucket->key[j] == key)
+            if (R(bucket->key[j]) == key)
             {
                 return true;
             }
@@ -379,10 +380,11 @@ bucket_exists(volatile bucket_t* bucket, clht_addr_t key)
     return false;
 }
 
+
 /* Insert a key-value entry into a hash table. */
 bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
 {
-    clht_hashtable_t* hashtable = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+    clht_hashtable_t* hashtable = (clht_hashtable_t*)R(h->ht);
     size_t bin = clht_hash(hashtable, key);
     volatile bucket_t* bucket = hashtable->table + bin;
 #if CLHT_READ_ONLY_FAIL == 1
@@ -395,7 +397,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
     clht_lock_t* lock = &bucket->lock;
     while (!LOCK_ACQ(lock, hashtable))
     {
-        hashtable = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+        hashtable = (clht_hashtable_t*)R(h->ht);
         size_t bin = clht_hash(hashtable, key);
 
         bucket = hashtable->table + bin;
@@ -412,12 +414,12 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            if (bucket->key[j] == key) 
+            if (R(bucket->key[j]) == key) 
             {
                 LOCK_RLS(lock);
                 return false;
             }
-            else if (empty == NULL && bucket->key[j] == 0)
+            else if (empty == NULL && R(bucket->key[j]) == 0)
             {
                 empty = (clht_addr_t*) &bucket->key[j];
                 empty_v = &bucket->val[j];
@@ -475,6 +477,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
 }
 
 
+
 /* Remove a key-value entry from a hash table. */
 clht_val_t clht_remove(clht_t* h, clht_addr_t key)
 {
@@ -508,7 +511,7 @@ clht_val_t clht_remove(clht_t* h, clht_addr_t key)
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            if (bucket->key[j] == key)
+            if (R(bucket->key[j]) == key)
             {
                 clht_val_t val = bucket->val[j];
                 movnt64((uint64_t *)&bucket->key[j], emptyMarker, true, true);
@@ -533,10 +536,10 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            if (bucket->key[j] == 0)
+            if (R(bucket->key[j]) == 0)
             {
                 bucket->val[j] = val;
-                bucket->key[j] = key;
+                W(bucket->key[j], key);
                 return true;
             }
         }
@@ -569,7 +572,7 @@ bucket_cpy(clht_t* h, volatile bucket_t* bucket, clht_hashtable_t* ht_new)
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            clht_addr_t key = bucket->key[j];
+            clht_addr_t key = R(bucket->key[j]);
             if (key != 0)
             {
                 uint64_t bin = clht_hash(ht_new, key);
@@ -760,8 +763,8 @@ ht_resize_pes(clht_t* h, int is_increase, int by)
 #endif
 
 	// atomically swap the root pointer
-    //SWAP_U64((uint64_t*) h, (uint64_t) ht_new);
-    //*(uint64_t*)h = (uint64_t)ht_new;
+    // SWAP_U64((uint64_t*) h, (uint64_t) ht_new);
+    // *(uint64_t*)h = (uint64_t)ht_new;
     __atomic_store_n((uint64_t*) h, (uint64_t) ht_new, __ATOMIC_SEQ_CST);
     clflush((char *)h, sizeof(uint64_t), false, true);
     // movnt64((uint64_t)&h->ht, (uint64_t)ht_new, false, true);
@@ -844,7 +847,7 @@ clht_size(clht_hashtable_t* hashtable)
         {
             for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
-                if (bucket->key[j] > 0)
+                if (R(bucket->key[j]) > 0)
                 {
                     size++;
                 }
@@ -888,7 +891,7 @@ ht_status(clht_t* h, int resize_increase, int just_print)
             expands++;
             for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
-                if (bucket->key[j] > 0)
+                if (R(bucket->key[j]) > 0)
                 {
                     size++;
                 }
@@ -1002,7 +1005,7 @@ clht_print(clht_hashtable_t* hashtable)
         {
             for (j = 0; j < g_dwEntriesPerBucket; j++)
             {
-                if (bucket->key[j])
+                if (R(bucket->key[j]))
                 {
                     printf("(%-5llu/%p)-> ", (long long unsigned int) bucket->key[j], (void*) bucket->val[j]);
                 }
