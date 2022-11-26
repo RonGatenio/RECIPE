@@ -481,7 +481,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
 /* Remove a key-value entry from a hash table. */
 clht_val_t clht_remove(clht_t* h, clht_addr_t key)
 {
-    clht_hashtable_t* hashtable = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+    clht_hashtable_t* hashtable = R(h->ht);
     size_t bin = clht_hash(hashtable, key);
     volatile bucket_t* bucket = hashtable->table + bin;
 
@@ -495,7 +495,7 @@ clht_val_t clht_remove(clht_t* h, clht_addr_t key)
     clht_lock_t* lock = &bucket->lock;
     while (!LOCK_ACQ(lock, hashtable))
     {
-        hashtable = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+        hashtable = R(h->ht);
         size_t bin = clht_hash(hashtable, key);
 
         bucket = hashtable->table + bin;
@@ -649,7 +649,7 @@ ht_resize_pes(clht_t* h, int is_increase, int by)
 
     check_ht_status_steps = CLHT_STATUS_INVOK;
 
-    clht_hashtable_t* ht_old = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+    clht_hashtable_t* ht_old = R(h->ht);
 
     if (TRYLOCK_ACQ(&h->resize_lock))
     {
@@ -765,7 +765,7 @@ ht_resize_pes(clht_t* h, int is_increase, int by)
 	// atomically swap the root pointer
     // SWAP_U64((uint64_t*) h, (uint64_t) ht_new);
     // *(uint64_t*)h = (uint64_t)ht_new;
-    __atomic_store_n((uint64_t*) h, (uint64_t) ht_new, __ATOMIC_SEQ_CST);
+    W(h->ht, ht_new);
     clflush((char *)h, sizeof(uint64_t), false, true);
     // movnt64((uint64_t)&h->ht, (uint64_t)ht_new, false, true);
 
@@ -870,7 +870,7 @@ ht_status(clht_t* h, int resize_increase, int just_print)
         return 0;
     }
 
-    clht_hashtable_t* hashtable = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+    clht_hashtable_t* hashtable = R(h->ht);
     uint64_t num_buckets = hashtable->num_buckets;
     volatile bucket_t* bucket = NULL;
     size_t size = 0;
@@ -1023,7 +1023,7 @@ clht_print(clht_hashtable_t* hashtable)
 void clht_lock_initialization(clht_t *h)
 {
 	DEBUG_PRINT("Performing Lock initialization\n");
-    clht_hashtable_t *ht = (clht_hashtable_t*)__atomic_load_n(&h->ht, __ATOMIC_SEQ_CST);
+    clht_hashtable_t *ht = R(h->ht);
     volatile bucket_t *next;
 
     h->resize_lock = LOCK_FREE;
