@@ -338,13 +338,13 @@ clht_val_t clht_get(clht_hashtable_t* hashtable, clht_addr_t key)
     {
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            clht_val_t val = bucket->val[j];
+            clht_val_t val = R(bucket->val[j]);
 #ifdef __tile__
             _mm_lfence();
 #endif
             if (R(bucket->key[j]) == key)
             {
-                if (likely(bucket->val[j] == val))
+                if (likely(R(bucket->val[j]) == val))
                 {
                     return val;
                 }
@@ -434,7 +434,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
                 DPP(put_num_failed_expand);
 
                 bucket_t* b = clht_bucket_create_stats(hashtable, &resize);
-                b->val[0] = val;
+                W(b->val[0], val);
 #ifdef __tile__
                 /* keep the writes in order */
                 _mm_sfence();
@@ -449,7 +449,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
             }
             else
             {
-                *empty_v = val;
+                W(*empty_v, val);
 #ifdef __tile__
                 /* keep the writes in order */
                 _mm_sfence();
@@ -513,7 +513,7 @@ clht_val_t clht_remove(clht_t* h, clht_addr_t key)
         {
             if (R(bucket->key[j]) == key)
             {
-                clht_val_t val = bucket->val[j];
+                clht_val_t val = R(bucket->val[j]);
                 movnt64((uint64_t *)&bucket->key[j], emptyMarker, true, true);
                 LOCK_RLS(lock);
                 return val;
@@ -538,7 +538,7 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
         {
             if (R(bucket->key[j]) == 0)
             {
-                bucket->val[j] = val;
+                W(bucket->val[j], val);
                 W(bucket->key[j], key);
                 return true;
             }
@@ -549,7 +549,7 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
             DPP(put_num_failed_expand);
             int null;
             bucket->next = clht_bucket_create_stats(hashtable, &null);
-            bucket->next->val[0] = val;
+            W(bucket->next->val[0], val);
             W(bucket->next->key[0], key);
             return true;
         }
@@ -605,7 +605,7 @@ bucket_cpy(clht_t* h, volatile bucket_t* bucket, clht_hashtable_t* ht_new)
     			}
 #endif
 
-                clht_put_seq(ht_new, key, bucket->val[j], bin);
+                clht_put_seq(ht_new, key, R(bucket->val[j]), bin);
             }
         }
         bucket = bucket->next;
@@ -1007,7 +1007,7 @@ clht_print(clht_hashtable_t* hashtable)
             {
                 if (R(bucket->key[j]))
                 {
-                    printf("(%-5llu/%p)-> ", (long long unsigned int) bucket->key[j], (void*) bucket->val[j]);
+                    printf("(%-5llu/%p)-> ", (long long unsigned int) R(bucket->key[j]), (void*) R(bucket->val[j]));
                 }
             }
 
