@@ -169,8 +169,8 @@ static inline void clflush_next_check(char *data, int len, bool fence)
 // #endif
         _mm_clflush(ptr);
 
-		if (((bucket_t *)ptr)->next)
-            clflush_next_check((char *)(((bucket_t *)ptr)->next), sizeof(bucket_t), false);
+		if (R(((bucket_t *)ptr)->next))
+            clflush_next_check((char *)(R(((bucket_t *)ptr)->next)), sizeof(bucket_t), false);
         while(read_tsc() < etsc) cpu_pause();
     }
     if (fence)
@@ -203,7 +203,7 @@ clht_bucket_create()
     {
         W(bucket->key[j], 0);
     }
-    bucket->next = NULL;
+    W(bucket->next, NULL);
 
     return bucket;
 }
@@ -355,7 +355,7 @@ clht_val_t clht_get(clht_hashtable_t* hashtable, clht_addr_t key)
             }
         }
 
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     }
     while (unlikely(bucket != NULL));
     return 0;
@@ -374,7 +374,7 @@ bucket_exists(volatile bucket_t* bucket, clht_addr_t key)
                 return true;
             }
         }
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     } 
     while (unlikely(bucket != NULL));
     return false;
@@ -427,7 +427,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
         }
 
         int resize = 0;
-        if (likely(bucket->next == NULL))
+        if (likely(R(bucket->next) == NULL))
         {
             if (unlikely(empty == NULL))
             {
@@ -471,7 +471,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
             }
             return true;
         }
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     }
     while (true);
 }
@@ -519,7 +519,7 @@ clht_val_t clht_remove(clht_t* h, clht_addr_t key)
                 return val;
             }
         }
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     }
     while (unlikely(bucket != NULL));
     LOCK_RLS(lock);
@@ -544,17 +544,17 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
             }
         }
 
-        if (bucket->next == NULL)
+        if (R(bucket->next) == NULL)
         {
             DPP(put_num_failed_expand);
             int null;
-            bucket->next = clht_bucket_create_stats(hashtable, &null);
+            W(bucket->next, clht_bucket_create_stats(hashtable, &null));
             W(bucket->next->val[0], val);
             W(bucket->next->key[0], key);
             return true;
         }
 
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     }
     while (true);
 }
@@ -608,7 +608,7 @@ bucket_cpy(clht_t* h, volatile bucket_t* bucket, clht_hashtable_t* ht_new)
                 clht_put_seq(ht_new, key, R(bucket->val[j]), bin);
             }
         }
-        bucket = bucket->next;
+        bucket = R(bucket->next);
     }
     while (bucket != NULL);
 
@@ -853,7 +853,7 @@ clht_size(clht_hashtable_t* hashtable)
                 }
             }
 
-            bucket = bucket->next;
+            bucket = R(bucket->next);
         }
         while (bucket != NULL);
     }
@@ -897,7 +897,7 @@ ht_status(clht_t* h, int resize_increase, int just_print)
                 }
             }
 
-            bucket = bucket->next;
+            bucket = R(bucket->next);
         }
         while (bucket != NULL);
 
@@ -1011,7 +1011,7 @@ clht_print(clht_hashtable_t* hashtable)
                 }
             }
 
-            bucket = bucket->next;
+            bucket = R(bucket->next);
             printf(" ** -> ");
         }
         while (bucket != NULL);
@@ -1033,7 +1033,7 @@ void clht_lock_initialization(clht_t *h)
     int i;
     for (i = 0; i < ht->num_buckets; i++) {
         ht->table[i].lock = LOCK_FREE;
-        for (next = ht->table[i].next; next != NULL; next = next->next) {
+        for (next = ht->table[i].next; next != NULL; next = R(next->next)) {
             next->lock = LOCK_FREE;
         }
     }
