@@ -439,7 +439,7 @@ bool clht_put(clht_t* h, clht_addr_t key, clht_val_t val)
                 /* keep the writes in order */
                 _mm_sfence();
 #endif
-                b->key[0] = key;
+                W(b->key[0], key);
 #ifdef __tile__
                 /* make sure they are visible */
                 _mm_sfence();
@@ -550,7 +550,7 @@ clht_put_seq(clht_hashtable_t* hashtable, clht_addr_t key, clht_val_t val, uint6
             int null;
             bucket->next = clht_bucket_create_stats(hashtable, &null);
             bucket->next->val[0] = val;
-            bucket->next->key[0] = key;
+            W(bucket->next->key[0], key);
             return true;
         }
 
