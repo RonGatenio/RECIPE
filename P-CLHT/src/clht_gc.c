@@ -32,6 +32,12 @@
 #include <assert.h>
 #include <malloc.h>
 
+// Global pool uuid
+extern uint64_t pool_uuid;
+
+// Global pool pointer
+extern PMEMobjpool *pop;
+
 static __thread ht_ts_t* clht_ts_thread = NULL;
 
 /* 

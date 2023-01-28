@@ -40,6 +40,12 @@
 
 //#define CLHTDEBUG
 
+// Global pool uuid
+uint64_t pool_uuid;
+
+// Global pool pointer
+PMEMobjpool *pop;
+
 __thread ssmem_allocator_t* clht_alloc;
 
 #ifdef DEBUG
