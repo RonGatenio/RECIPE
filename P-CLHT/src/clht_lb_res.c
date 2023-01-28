@@ -74,6 +74,10 @@ volatile uint32_t g_dwEntriesPerBucket = ENTRIES_PER_BUCKET;
 #endif
 */
 
+#define W(x, v) __atomic_store_n((uint64_t*)&x, (uint64_t)v, __ATOMIC_SEQ_CST)
+#define R(x) __atomic_load_n((uint64_t*)&x, __ATOMIC_SEQ_CST)
+#define movnt64(dest, src, front, back) if (front) mfence(); __atomic_store_n((uint64_t*) dest, (uint64_t) src, __ATOMIC_SEQ_CST); _mm_clflush(dest); if (back) mfence();
+
     const char*
 clht_type_desc()
 {
@@ -181,9 +185,6 @@ static inline void clflush_next_check(char *data, int len, bool fence)
 
 
 
-#define W(x, v) __atomic_store_n((uint64_t*)&x, (uint64_t)v, __ATOMIC_SEQ_CST)
-#define R(x) __atomic_load_n((uint64_t*)&x, __ATOMIC_SEQ_CST)
-#define movnt64(dest, src, front, back) if (front) mfence(); __atomic_store_n((uint64_t*) dest, (uint64_t) src, __ATOMIC_SEQ_CST); _mm_clflush(dest); if (back) mfence();
 
 /* Create a new bucket. */
     bucket_t*
@@ -289,7 +290,7 @@ clht_hashtable_create(uint64_t num_buckets)
         uint32_t j;
         for (j = 0; j < g_dwEntriesPerBucket; j++)
         {
-            hashtable->table[i].key[j] = 0;
+            W(hashtable->table[i].key[j], 0);
         }
     }
 
