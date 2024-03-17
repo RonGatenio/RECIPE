@@ -57,9 +57,11 @@ void run(char **argv) {
 
     int num_thread = atoi(argv[2]);
 
+    char *pmem_path = argv[3];
+
     printf("operation,n,ops/s\n");
 
-    clht_t *hashtable = clht_create(512);
+    clht_t *hashtable = clht_create(pmem_path, 512);
 
     barrier_init(&barrier, num_thread);
 
@@ -142,8 +144,8 @@ void run(char **argv) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3) {
-        printf("usage: %s [n] [nthreads]\nn: number of keys (integer)\nnthreads: number of threads (integer)\n", argv[0]);
+    if (argc != 4) {
+        printf("usage: %s [pm-path] [n] [nthreads]\npm-path: path to pmem file\nn: number of keys (integer)\nnthreads: number of threads (integer)\n", argv[0]);
         return 1;
     }
 

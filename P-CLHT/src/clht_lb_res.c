@@ -225,7 +225,7 @@ clht_bucket_create_stats(clht_hashtable_t* h, int* resize)
 clht_hashtable_t* clht_hashtable_create(uint64_t num_buckets);
 
     clht_t* 
-clht_create(uint64_t num_buckets)
+clht_create(char *pmem_path, uint64_t num_buckets)
 {
     // Enable prefault
     int arg_open = 1, arg_create = 1;
@@ -237,14 +237,14 @@ clht_create(uint64_t num_buckets)
     // Open the PMEMpool if it exists, otherwise create it
     size_t pool_size = PMEMOBJ_MIN_POOL; //32*1024*1024;//*1024UL;
     // pool_size = 32*1024*1024*2;
-    if (access("/tmp/pool", F_OK) != -1)
+    if (access(pmem_path, F_OK) != -1)
     {
         fprintf(stdout, "pmemobj_open\n");
-        pop = pmemobj_open("/tmp/pool", POBJ_LAYOUT_NAME(clht));
+        pop = pmemobj_open(pmem_path, POBJ_LAYOUT_NAME(clht));
     }
     else {
         fprintf(stdout, "pmemobj_create\n");
-        pop = pmemobj_create("/tmp/pool", POBJ_LAYOUT_NAME(clht), pool_size, 0666);
+        pop = pmemobj_create(pmem_path, POBJ_LAYOUT_NAME(clht), pool_size, 0666);
     }
     
     if (pop == NULL)
