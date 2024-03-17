@@ -8,11 +8,10 @@ else()
     message(STATUS "Build type is set to ${CMAKE_BUILD_TYPE}")
 endif()
 
-set(LLVM_DIR $ENV{LLVM_HOME})
-set(CMAKE_C_COMPILER "${LLVM_DIR}/bin/clang")
-set(CMAKE_CXX_COMPILER "${LLVM_DIR}/bin/clang++")
+set(CMAKE_C_COMPILER "clang")
+set(CMAKE_CXX_COMPILER "clang++")
 
-set(COMMON_FLAGS "-march=native -mavx -Wno-deprecated-declarations -Wall -Wextra -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -faligned-new=64")
+set(COMMON_FLAGS "-fheinous-gnu-extensions -march=native -mavx -Wno-deprecated-declarations -Wall -Wextra -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -faligned-new=64")
 
 execute_process(COMMAND cat /proc/cpuinfo COMMAND grep clflush OUTPUT_VARIABLE ENABLE_CLFLUSH)
 execute_process(COMMAND cat /proc/cpuinfo COMMAND grep clflushopt OUTPUT_VARIABLE ENABLE_CLFLUSHOPT)
@@ -36,31 +35,27 @@ else()
     message(FATAL_ERROR "Cannot find any flush instructions (clflush, clflushopt, clwb)")
 endif()
 
-set(HOOK_FLAGS "-fheinous-gnu-extensions -g -O0 -v")
+set(COMMON_FLAGS "${COMMON_FLAGS} -g -O0 -v")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${HOOK_FLAGS} -std=c++17 -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} -std=c++17 ")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${HOOK_FLAGS}")
-
-add_compile_options("-fsanitize=thread")
-link_libraries("-fsanitize=thread")
-
-add_compile_options("-stdlib=libc++")
-link_libraries("-stdlib=libc++")
+# Add CPRD pass
+add_compile_options("-fpass-plugin=/app/build/bin/PrdPass.so")
+link_libraries("/app/build/bin/tsan-x86_64.a")
+link_libraries("-z muldefs")
 
 add_definitions(-DADD_PADDING)
 
-# include_directories(include /usr/include/c++/9)
-# include_directories(include /usr/include/x86_64-linux-gnu/c++/9)
+include_directories(include /usr/include/c++/11)
+include_directories(include /usr/include/x86_64-linux-gnu/c++/11)
 include_directories(include external/include)
-include_directories(include ${LLVM_DIR}/include/c++/v1)
+include_directories(include ${LLVM_INCLUDE_DIRS})
 
 find_library(JemallocLib jemalloc)
 find_library(TbbLib tbb)
-find_package (Threads)
-link_directories(${LLVM_DIR}/lib)
-# link_directories(${PMRACE_DIR}/instrument)
-# link_directories(${PMRACE_DIR}/deps/pmdk/install/lib/pmdk_debug)
+find_package(Threads)
+link_directories(${LLVM_LIBRARY_DIRS})
 
 link_libraries("-Wl,--copy-dt-needed-entries")
 
