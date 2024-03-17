@@ -47,7 +47,9 @@ barrier_t barrier;
 void run(char **argv) {
     std::cout << "Simple Example of P-CLHT" << std::endl;
 
-    uint64_t n = std::atoll(argv[1]);
+    char *pmem_path = argv[1];
+
+    uint64_t n = std::atoll(argv[2]);
     uint64_t *keys = new uint64_t[n];
 
     // Generate keys
@@ -55,18 +57,14 @@ void run(char **argv) {
         keys[i] = i + 1;
     }
 
-    int num_thread = atoi(argv[2]);
-
-    char *pmem_path = argv[3];
+    int num_thread = atoi(argv[3]);
 
     printf("operation,n,ops/s\n");
-
     clht_t *hashtable = clht_create(pmem_path, 512);
 
     barrier_init(&barrier, num_thread);
 
     thread_data_t *tds = (thread_data_t *) malloc(num_thread * sizeof(thread_data_t));
-
     std::atomic<int> next_thread_id;
 
     {

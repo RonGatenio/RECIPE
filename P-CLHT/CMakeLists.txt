@@ -61,7 +61,7 @@ link_libraries("-Wl,--copy-dt-needed-entries")
 
 set(P_CLHT_TEST example.cpp src/clht_lb_res.c src/clht_gc.c
     external/sspfd/sspfd.c external/ssmem/src/ssmem.c)
-add_executable(example ${P_CLHT_TEST})
+add_executable(pclht ${P_CLHT_TEST})
 
-target_link_libraries(example ${TbbLib} ${JemallocLib} boost_system
+target_link_libraries(pclht ${TbbLib} ${JemallocLib} boost_system
     boost_thread pthread pmemobj pmem)

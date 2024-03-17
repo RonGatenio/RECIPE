@@ -25,7 +25,6 @@
  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
  */
 
 #include "clht_lb_res.h"
@@ -40,12 +39,7 @@ extern PMEMobjpool *pop;
 
 static __thread ht_ts_t* clht_ts_thread = NULL;
 
-/* 
- * initialize thread metadata for GC
- */
-    void
-clht_gc_thread_init(clht_t* h, int id)
-{
+void clht_gc_thread_init(clht_t* h, int id) {
     clht_alloc = (ssmem_allocator_t*) malloc(sizeof(ssmem_allocator_t));
     assert(clht_alloc != NULL);
     ssmem_alloc_init_fs_size(clht_alloc, SSMEM_DEFAULT_MEM_SIZE, SSMEM_GC_FREE_SET_SIZE, id);

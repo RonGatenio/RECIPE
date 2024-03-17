@@ -67,26 +67,20 @@ __thread size_t check_ht_status_steps = CLHT_STATUS_INVOK_IN;
 #endif
 
     const char*
-clht_type_desc()
-{
+clht_type_desc() {
     return "CLHT-LB-RESIZE";
 }
 
-    inline int
-is_power_of_two (unsigned int x) 
-{
+inline int is_power_of_two (unsigned int x) {
     return ((x != 0) && !(x & (x - 1)));
 }
 
-    static inline
-int is_odd (int x)
-{
+static inline int is_odd (int x) {
     return x & 1;
 }
 
 /** Jenkins' hash function for 64-bit integers. */
-    inline uint64_t
-__ac_Jenkins_hash_64(uint64_t key)
+inline uint64_t __ac_Jenkins_hash_64(uint64_t key)
 {
     key += ~(key << 32);
     key ^= (key >> 22);
@@ -235,20 +229,14 @@ clht_create(char *pmem_path, uint64_t num_buckets)
         perror("failed to configure prefaults at create\n");
 
     // Open the PMEMpool if it exists, otherwise create it
-    size_t pool_size = PMEMOBJ_MIN_POOL; //32*1024*1024;//*1024UL;
-    // pool_size = 32*1024*1024*2;
-    if (access(pmem_path, F_OK) != -1)
-    {
-        fprintf(stdout, "pmemobj_open\n");
-        pop = pmemobj_open(pmem_path, POBJ_LAYOUT_NAME(clht));
+    size_t pool_size = PMEMOBJ_MIN_POOL;
+    if (access(pmem_path, F_OK) != -1) {
+        fprintf(stderr, "pmemobj_open\n"); pop = pmemobj_open(pmem_path, POBJ_LAYOUT_NAME(clht));
+    } else {
+        fprintf(stderr, "pmemobj_create %s\n", pmem_path); pop = pmemobj_create(pmem_path, POBJ_LAYOUT_NAME(clht), pool_size, 0666);
     }
-    else {
-        fprintf(stdout, "pmemobj_create\n");
-        pop = pmemobj_create(pmem_path, POBJ_LAYOUT_NAME(clht), pool_size, 0666);
-    }
-    
-    if (pop == NULL)
-        perror("failed to open the pool\n");
+
+    if (pop == NULL) error("failed to open the pool\n");
 
     // Create the root pointer
     PMEMoid my_root = pmemobj_root(pop, sizeof(clht_t));
