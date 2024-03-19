@@ -304,7 +304,7 @@ lock_acq_chk_resize(clht_lock_t* lock, clht_hashtable_t* h)
 {
   char once = 1;
   clht_lock_t l;
-  while ((l = CAS_U8(lock, LOCK_FREE, LOCK_UPDATE)) == LOCK_UPDATE)
+  while ((l = CAS_U8_NO_LOG(lock, LOCK_FREE, LOCK_UPDATE)) == LOCK_UPDATE)
     {
       if (once)
       	{
@@ -337,7 +337,7 @@ static inline int
 lock_acq_resize(clht_lock_t* lock)
 {
   clht_lock_t l;
-  while ((l = CAS_U8(lock, LOCK_FREE, LOCK_RESIZE)) == LOCK_UPDATE)
+  while ((l = CAS_U8_NO_LOG(lock, LOCK_FREE, LOCK_RESIZE)) == LOCK_UPDATE)
     {
       _mm_pause();
     }

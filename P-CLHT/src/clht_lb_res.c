@@ -108,7 +108,7 @@ inline void *clht_ptr_from_off(uint64_t offset, bool alignment)
 }
 
 static inline void mfence() {
-    asm volatile("sfence":::"memory");
+    _mm_sfence();
 }
 
 static inline void clflush(char *data, int len, bool front, bool back)
@@ -116,14 +116,14 @@ static inline void clflush(char *data, int len, bool front, bool back)
     volatile char *ptr = (char *)((unsigned long)data &~(CACHE_LINE_SIZE-1));
     if (front)
         mfence();
-    for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){
-#ifdef CLFLUSH
-        asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
-#elif CLFLUSH_OPT
-        asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
-#elif CLWB
-        asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
-#endif
+    for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){ _mm_clflush((const void*)ptr);
+// #ifdef CLFLUSH
+//         asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
+// #elif CLFLUSH_OPT
+//         asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
+// #elif CLWB
+//         asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
+// #endif
     }
     if (back)
         mfence();
@@ -135,14 +135,14 @@ static inline void clflush_next_check(char *data, int len, bool fence)
     volatile char *ptr = (char *)((unsigned long)data &~(CACHE_LINE_SIZE-1));
     if (fence)
         mfence();
-    for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){
-#ifdef CLFLUSH
-        asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
-#elif CLFLUSH_OPT
-        asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
-#elif CLWB
-        asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
-#endif
+    for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){ _mm_clflush((const void*)ptr);
+// #ifdef CLFLUSH
+//         asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
+// #elif CLFLUSH_OPT
+//         asm volatile(".byte 0x66; clflush %0" : "+m" (*(volatile char *)(ptr)));
+// #elif CLWB
+//         asm volatile(".byte 0x66; xsaveopt %0" : "+m" (*(volatile char *)(ptr)));
+// #endif
 		if (((bucket_t *)ptr)->next_off != OID_NULL.off)
             clflush_next_check((char *)clht_ptr_from_off((((bucket_t *)ptr)->next_off), true), sizeof(bucket_t), false);
     }
@@ -229,7 +229,7 @@ clht_create(char *pmem_path, uint64_t num_buckets)
         perror("failed to configure prefaults at create\n");
 
     // Open the PMEMpool if it exists, otherwise create it
-    size_t pool_size = PMEMOBJ_MIN_POOL;
+    size_t pool_size = 32*1024*1024*2; //PMEMOBJ_MIN_POOL;
     if (access(pmem_path, F_OK) != -1) {
         fprintf(stderr, "pmemobj_open\n"); pop = pmemobj_open(pmem_path, POBJ_LAYOUT_NAME(clht));
     } else {
