@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PM_FILE="/tmp/pmem_pclht_data"
-NKEYS=100000
+NKEYS=10000
 NTHREADS=4
 
 rm -f $PM_FILE

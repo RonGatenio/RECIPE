@@ -42,7 +42,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
 
 # Add CPRD pass
 add_compile_options("-fpass-plugin=/app/build/bin/PrdPass.so")
-link_libraries("/app/build/bin/tsan-x86_64.a")
+link_libraries("/app/build/bin/cprd-x86_64.a")
 link_libraries("-z muldefs")
 
 add_definitions(-DADD_PADDING)
