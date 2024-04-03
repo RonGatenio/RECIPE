@@ -41,8 +41,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} -std=c++17 ")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
 
 # Add CPRD pass
-add_compile_options("-fpass-plugin=/app/build/bin/PrdPass.so")
-link_libraries("/app/build/bin/cprd-x86_64.a")
+add_compile_options("-fpass-plugin=$ENV{APP_BIN}/PrdPass.so")
+link_libraries("$ENV{APP_BIN}/cprd-x86_64.a")
 link_libraries("-z muldefs")
 
 add_definitions(-DADD_PADDING)
