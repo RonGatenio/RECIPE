@@ -11,7 +11,9 @@ PROG=pclht
 OUTPUT=pclht.trace
 echo [*] Executing $PROG '             ' [$OUTPUT]
 ./P-CLHT/build/$PROG $PM_FILE $NKEYS $NTHREADS 2> $OUTPUT
+cp $OUTPUT ${CPRD_RESULTS_TRACES}
 
 # OUTPUT=pclht-recovery.trace
 # echo [*] Executing $PROG again '       ' [$OUTPUT]
 # ./P-CLHT/build/$PROG $PM_FILE $NKEYS $NTHREADS 2> $OUTPUT
+# cp $OUTPUT ${CPRD_RESULTS_TRACES}
